@@ -1,0 +1,27 @@
+path: data/food_dataset
+train: images/train
+val: images/train
+test:
+
+# nc: 13
+# names: ['boiled_rice', 'carbs', 'chicken_rice', 'crispy_pork_rice', 'fried_chicken_rice', 'fried_pork_rice', 'meat', 'noodles', 'omelet_rice', 'pad_thai', 'salad', 'steak', 'veg']
+names:
+  0: 'boiled_rice'
+  1: 'carbs'
+  2: 'chicken_rice'
+  3: 'crispy_pork_rice'
+  4: 'fried_chicken_rice'
+  5: 'fried_pork_rice'
+  6: 'meat'
+  7: 'noodles'
+  8: 'omelet_rice'
+  9: 'pad_thai'
+  10: 'salad'
+  11: 'steak'
+  12: 'veg'
+# roboflow:
+#   workspace: food-dataset-crrau
+#   project: yolov5-o9hvv
+#   version: 2
+#   license: CC BY 4.0
+#   url: https://universe.roboflow.com/food-dataset-crrau/yolov5-o9hvv/dataset/2

@@ -1,0 +1,5 @@
+data/food_dataset/images/train โหลดจาก https://drive.google.com/drive/folders/1buggHML0JU_z5425PwONaOlUnqk7Bi5J
+data/food_dataset/labels/train โหลดจาก https://drive.google.com/drive/folders/1X2S5G0Oo7CEMPOpTnpa20lia9tW6HC0g
+
+ควรให้ชื่อไฟล์ labels และ images ตรงกัน
+ใช้คู่กับ https://github.com/ultralytics/yolov5

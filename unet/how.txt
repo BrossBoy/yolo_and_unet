@@ -1,0 +1,4 @@
+data/imgs โหลดจาก https://drive.google.com/drive/folders/1buggHML0JU_z5425PwONaOlUnqk7Bi5J
+data/masks โหลดจาก https://drive.google.com/drive/folders/14F84KXhPvoyK-htxyQRL8Mj8obkc7utN
+
+ใช้คู่กับ git repo https://github.com/milesial/Pytorch-UNet/tree/master
