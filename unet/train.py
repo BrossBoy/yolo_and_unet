@@ -22,6 +22,8 @@ from utils.dice_score import dice_loss
 from sklearn import metrics
 import matplotlib.pyplot as plt
 
+from torch.utils.tensorboard import SummaryWriter
+
 dir_img = Path("./data/imgs/")
 dir_mask = Path("./data/masks/")
 dir_checkpoint = Path("./checkpoints/")
@@ -165,6 +167,8 @@ def train_model(
     criterion = nn.CrossEntropyLoss() if model.n_classes > 1 else nn.BCEWithLogitsLoss()
     global_step = 0
 
+    writer = SummaryWriter()
+
     # 5. Begin training
     for epoch in range(1, epochs + 1):
         model.train()
@@ -267,6 +271,8 @@ def train_model(
                             pass
 
         precision, recall = cal_metrics(model, val_loader, device, amp)
+        writer.add_scalar("Unet_Train/lr", optimizer.param_groups[0]["lr"], epoch)
+        writer.add_scalar("Unet_Train/loss", loss.item(), epoch)
 
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
@@ -276,6 +282,9 @@ def train_model(
                 state_dict, str(dir_checkpoint / "checkpoint_epoch{}.pth".format(epoch))
             )
             logging.info(f"Checkpoint {epoch} saved!")
+
+    writer.flush()
+    writer.close()
 
 
 def get_args():
