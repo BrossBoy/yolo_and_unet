@@ -21,8 +21,7 @@ from utils.dice_score import dice_loss
 
 from sklearn import metrics
 import matplotlib.pyplot as plt
-
-from torch.utils.tensorboard import SummaryWriter
+import numpy as np
 
 dir_img = Path("./data/imgs/")
 dir_mask = Path("./data/masks/")
@@ -33,8 +32,7 @@ def cal_metrics(net, dataloader, device, amp):
     net.eval()
     num_val_batches = len(dataloader)
     # iterate over the validation set
-    re = 0
-    pre = 0
+
     with torch.autocast(device.type if device.type != "mps" else "cpu", enabled=amp):
         for batch in tqdm(
             dataloader,
@@ -50,44 +48,41 @@ def cal_metrics(net, dataloader, device, amp):
                 device=device, dtype=torch.float32, memory_format=torch.channels_last
             )
             mask_true = mask_true.to(device=device, dtype=torch.long)
-
+            mask_true = torch.flatten(mask_true)
             # predict the mask
             mask_pred = net(image)
-            # print(mask_pred, type(mask_pred), mask_pred.shape)
-            # break
-            if net.n_classes == 1:
-                assert (
-                    mask_true.min() >= 0 and mask_true.max() <= 1
-                ), "True mask indices should be in [0, 1]"
-                mask_pred = (F.sigmoid(mask_pred) > 0.5).float()
-                # compute the Dice score
-                # dice_score += dice_coeff(mask_pred, mask_true, reduce_batch_first=False)
-            else:
-                assert (
-                    mask_true.min() >= 0 and mask_true.max() < net.n_classes
-                ), "True mask indices should be in [0, n_classes["
-                # convert to one-hot format
-                mask_true = (
-                    F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float()
-                )
-                # print(mask_true, type(mask_true), mask_true.shape)
-                mask_pred = (
-                    F.one_hot(mask_pred.argmax(dim=1), net.n_classes)
-                    .permute(0, 3, 1, 2)
-                    .float()
-                )
-            re += metrics.recall_score(
-                torch.flatten(mask_true).to(device="cpu"),
-                torch.flatten(mask_pred).to(device="cpu"),
-            )
-            pre += metrics.precision_score(
-                torch.flatten(mask_true).to(device="cpu"),
-                torch.flatten(mask_pred).to(device="cpu"),
-            )
-    if num_val_batches != 0:
-        re = re / num_val_batches
-        pre = pre / num_val_batches
-    return pre, re
+            # mask_pred = torch.flatten(mask_pred)
+            print(mask_true.shape, mask_true.min(), mask_true.max())
+            # print(mask_pred)
+            class_0 = torch.where(mask_true == 0, 1, 0)
+            class_1 = torch.where(mask_true == 1, 1, 0)
+            class_2 = torch.where(mask_true == 2, 1, 0)
+            class_3 = torch.where(mask_true == 3, 1, 0)
+            # print(class_0.shape, class_1.shape)
+            all_class = torch.cat((class_0, class_1, class_2, class_3))
+            all_class = all_class.cpu()
+            all_class = all_class.detach().numpy()
+            print(all_class.shape)
+            class_0 = mask_pred[:, 0]
+            class_0 = F.sigmoid(class_0)
+            class_0 = torch.flatten(class_0)
+            class_1 = mask_pred[:, 1]
+            class_1 = F.sigmoid(class_1)
+            class_1 = torch.flatten(class_1)
+            class_2 = mask_pred[:, 2]
+            class_2 = F.sigmoid(class_2)
+            class_2 = torch.flatten(class_2)
+            class_3 = mask_pred[:, 3]
+            class_3 = F.sigmoid(class_3)
+            class_3 = torch.flatten(class_3)
+            all_class_pre = torch.cat((class_0, class_1, class_2, class_3))
+            all_class_pre = all_class_pre.cpu()
+            all_class_pre = all_class_pre.detach().numpy()
+
+    precision, recall, thresholds = metrics.precision_recall_curve(
+        all_class, all_class_pre
+    )
+    return precision, recall
 
 
 def train_model(
@@ -166,8 +161,6 @@ def train_model(
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
     criterion = nn.CrossEntropyLoss() if model.n_classes > 1 else nn.BCEWithLogitsLoss()
     global_step = 0
-
-    writer = SummaryWriter()
 
     # 5. Begin training
     for epoch in range(1, epochs + 1):
@@ -270,10 +263,6 @@ def train_model(
                         except:
                             pass
 
-        precision, recall = cal_metrics(model, val_loader, device, amp)
-        writer.add_scalar("Unet_Train/lr", optimizer.param_groups[0]["lr"], epoch)
-        writer.add_scalar("Unet_Train/loss", loss.item(), epoch)
-
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             state_dict = model.state_dict()
@@ -282,9 +271,10 @@ def train_model(
                 state_dict, str(dir_checkpoint / "checkpoint_epoch{}.pth".format(epoch))
             )
             logging.info(f"Checkpoint {epoch} saved!")
-
-    writer.flush()
-    writer.close()
+    precision, recall = cal_metrics(model, val_loader, device, amp)
+    np.save("u_py", precision)
+    np.save("u_px", recall)
+    # return precision, recall
 
 
 def get_args():
@@ -292,7 +282,7 @@ def get_args():
         description="Train the UNet on images and target masks"
     )
     parser.add_argument(
-        "--epochs", "-e", metavar="E", type=int, default=1, help="Number of epochs"
+        "--epochs", "-e", metavar="E", type=int, default=30, help="Number of epochs"
     )
     parser.add_argument(
         "--batch-size",
@@ -300,7 +290,7 @@ def get_args():
         dest="batch_size",
         metavar="B",
         type=int,
-        default=50,
+        default=30,
         help="Batch size",
     )
     parser.add_argument(
