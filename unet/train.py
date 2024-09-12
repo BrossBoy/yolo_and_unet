@@ -161,7 +161,8 @@ def train_model(
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
     criterion = nn.CrossEntropyLoss() if model.n_classes > 1 else nn.BCEWithLogitsLoss()
     global_step = 0
-
+    list_lost = []
+    list_vali = []
     # 5. Begin training
     for epoch in range(1, epochs + 1):
         model.train()
@@ -263,6 +264,10 @@ def train_model(
                         except:
                             pass
 
+        list_lost.append(loss.item())
+        list_vali.append(val_score.item())
+        # print(val_score)
+
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             state_dict = model.state_dict()
@@ -272,8 +277,10 @@ def train_model(
             )
             logging.info(f"Checkpoint {epoch} saved!")
     precision, recall = cal_metrics(model, val_loader, device, amp)
-    np.save("u_py", precision)
-    np.save("u_px", recall)
+    np.save("u1_py", precision)
+    np.save("u1_px", recall)
+    np.save("list_lost_u1", np.array(list_lost))
+    np.save("list_vali_u1", np.array(list_vali))
     # return precision, recall
 
 
@@ -290,7 +297,7 @@ def get_args():
         dest="batch_size",
         metavar="B",
         type=int,
-        default=30,
+        default=16,
         help="Batch size",
     )
     parser.add_argument(
